@@ -1704,8 +1704,11 @@ window.IMGS={"brandx-썸네일": "data:image/webp;base64,UklGRuJCAABXRUJQVlA4INZ
     if(p.caseStudy){ dlg.classList.add('cs-open'); } else { dlg.classList.remove('cs-open'); }
     if(supportsDialog){ if(!dlg.open) dlg.showModal(); } else { dlg.setAttribute('open',''); dlg.style.position='fixed'; dlg.style.inset='0'; dlg.style.zIndex='100'; }
     document.body.style.overflow='hidden';
+    // 모달이 표시된 뒤 스크롤을 맨 위로 리셋 (이전에 열었던 프로젝트의 스크롤 위치가 남는 문제 방지)
+    scroll.scrollTop=0;
+    try{ closeBtn.focus({preventScroll:true}); }catch(e){ closeBtn.focus(); }
+    requestAnimationFrame(function(){ scroll.scrollTop=0; });
     try{ if(history.replaceState) history.replaceState(null,'','#p-'+id); }catch(e){}
-    closeBtn.focus();
   }
   function closeProject(){
     if(supportsDialog){ if(dlg.open) dlg.close(); } else { dlg.removeAttribute('open'); }
