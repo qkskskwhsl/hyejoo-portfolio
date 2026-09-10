@@ -198,6 +198,9 @@
   dialog.pdlg{padding:0; border:1px solid var(--line-strong); border-radius:14px; background:var(--bg); color:var(--ink); width:min(1080px,94vw); max-width:1080px; max-height:90vh; box-shadow:var(--shadow-lg); overflow:hidden}
   dialog.pdlg::backdrop{background:rgba(6,8,12,.9); backdrop-filter:blur(10px)}
   dialog.pdlg{outline:1px solid rgba(255,255,255,.06)}
+  /* 세션 녹화(Clarity 등)가 모달을 캡처하도록 top layer(showModal) 대신 일반 오버레이로 표시 */
+  .pdlg-back{position:fixed; inset:0; z-index:90; background:rgba(6,8,12,.9); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+  dialog.pdlg[open]{position:fixed; inset:0; margin:auto; z-index:100}
   /* light case-study modal */
   dialog.pdlg.cs-open{background:#FFFFFF; border-color:#D7DAE1}
   .pdlg.cs-open .dlg-bar{background:rgba(255,255,255,.92); border-bottom-color:#E7E9EE}
@@ -737,6 +740,7 @@
   </div>
 </main>
 
+<div class="pdlg-back" id="pdlgBack" hidden></div>
 <dialog class="pdlg" id="pdlg" aria-label="프로젝트 상세">
   <div class="dlg-bar">
     <span class="lbl" id="pdlg-label">프로젝트 상세</span>
@@ -1675,23 +1679,27 @@ window.IMGS={"brandx-썸네일": "data:image/webp;base64,UklGRuJCAABXRUJQVlA4INZ
       + '<div class="apply"><span class="eyebrow-ko">성과 및 활용 방안</span><p>'+p.apply+'</p></div></article>');
   }
 
-  var dlg=document.getElementById('pdlg'), scroll=document.getElementById('pdlg-scroll'),
+  var dlg=document.getElementById('pdlg'), dlgBack=document.getElementById('pdlgBack'),
+      scroll=document.getElementById('pdlg-scroll'),
       label=document.getElementById('pdlg-label'), closeBtn=document.getElementById('pdlg-close'),
-      lastFocus=null, supportsDialog=typeof dlg.showModal==='function';
+      lastFocus=null;
   function openProject(id){
     var p=byId[id]; if(!p) return;
     lastFocus=document.activeElement; scroll.innerHTML=detailHTML(p); label.textContent=p.svc; scroll.scrollTop=0;
     if(p.caseStudy){ dlg.classList.add('cs-open'); } else { dlg.classList.remove('cs-open'); }
-    if(supportsDialog){ if(!dlg.open) dlg.showModal(); } else { dlg.setAttribute('open',''); dlg.style.position='fixed'; dlg.style.inset='0'; dlg.style.zIndex='100'; }
+    // top layer(showModal) 대신 [open] 속성 + 백드롭으로 표시 → 세션 녹화(Clarity)가 모달 내용까지 캡처
+    if(dlgBack) dlgBack.hidden=false;
+    dlg.setAttribute('open','');
     document.body.style.overflow='hidden';
-    // 모달이 표시된 뒤 스크롤을 맨 위로 리셋 (이전에 열었던 프로젝트의 스크롤 위치가 남는 문제 방지)
+    // 모달을 연 직후 스크롤을 맨 위로 리셋 (이전에 열었던 프로젝트의 스크롤 위치가 남는 문제 방지)
     scroll.scrollTop=0;
     try{ closeBtn.focus({preventScroll:true}); }catch(e){ closeBtn.focus(); }
     requestAnimationFrame(function(){ scroll.scrollTop=0; });
     try{ if(history.replaceState) history.replaceState(null,'','#p-'+id); }catch(e){}
   }
   function closeProject(){
-    if(supportsDialog){ if(dlg.open) dlg.close(); } else { dlg.removeAttribute('open'); }
+    dlg.removeAttribute('open');
+    if(dlgBack) dlgBack.hidden=true;
     document.body.style.overflow='';
     try{ if(history.replaceState) history.replaceState(null,'','#work'); }catch(e){}
     if(lastFocus&&lastFocus.focus) lastFocus.focus();
@@ -1710,10 +1718,11 @@ window.IMGS={"brandx-썸네일": "data:image/webp;base64,UklGRuJCAABXRUJQVlA4INZ
   });
   document.addEventListener('keydown',function(e){
     if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pcard')){ e.preventDefault(); openProject(e.target.getAttribute('data-open')); }
-    if(e.key==='Escape'&&dlg.open&&!supportsDialog){ closeProject(); }
+    if(e.key==='Escape'&&dlg.hasAttribute('open')){ closeProject(); }
   });
   closeBtn.addEventListener('click',closeProject);
   dlg.addEventListener('click',function(e){ if(e.target===dlg) closeProject(); });
+  dlgBack&&dlgBack.addEventListener('click',closeProject);
   dlg.addEventListener('cancel',function(e){ e.preventDefault(); closeProject(); });
   (function(){ var h=location.hash||''; if(h.indexOf('#p-')===0){ openProject(h.slice(3)); } })();
 
